@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Are You a Gay?🌈</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: radial-gradient(circle at 50% 30%, #1f2640, #0a0c16 70%);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    color: #f4f1ea;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+  }
+
+  body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #stage {
+    position: relative;
+    width: 100%;
+    height: 100%;
+  }
+
+  #question {
+    position: absolute;
+    top: 18%;
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+    width: 90%;
+  }
+
+  #question h1 {
+    font-size: clamp(1.6rem, 5vw, 2.6rem);
+    margin: 0 0 8px;
+    letter-spacing: 0.5px;
+  }
+
+  #question p {
+    margin: 0;
+    font-size: 0.95rem;
+    color: #9aa0b8;
+  }
+
+  button.choice {
+    position: absolute;
+    border: none;
+    border-radius: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.12s ease, width 0.25s ease, height 0.25s ease,
+                font-size 0.25s ease, opacity 0.4s ease, left 0.12s ease, top 0.12s ease;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.35);
+  }
+
+  #yesBtn {
+    background: linear-gradient(145deg, #4ade80, #22c55e);
+    color: #06210f;
+    width: 130px;
+    height: 56px;
+    font-size: 1.1rem;
+    z-index: 5;
+    top: 55%;
+    left: calc(50% - 150px);
+  }
+
+  #noBtn {
+    background: linear-gradient(145deg, #f87171, #ef4444);
+    color: #2a0606;
+    width: 130px;
+    height: 56px;
+    font-size: 1.1rem;
+    z-index: 4;
+    top: 55%;
+    left: calc(50% + 20px);
+  }
+
+  #flash {
+    position: fixed;
+    inset: 0;
+    background: white;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  #flash.fire {
+    animation: flashpop 0.35s ease-out;
+  }
+
+  @keyframes flashpop {
+    0%   { opacity: 0.95; }
+    100% { opacity: 0; }
+  }
+
+  #shutterLine {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9998;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #caption {
+    position: absolute;
+    bottom: 8%;
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+    font-size: 0.85rem;
+    color: #6f7591;
+    width: 85%;
+  }
+
+  #gotchaOverlay {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    background: rgba(8, 10, 20, 0.92);
+    text-align: center;
+    padding: 20px;
+    z-index: 20;
+  }
+
+  #gotchaOverlay h2 {
+    font-size: clamp(1.8rem, 6vw, 3rem);
+    margin: 0 0 10px;
+    color: #fbbf24;
+  }
+
+  #gotchaOverlay p {
+    color: #c7cbe0;
+    font-size: 1rem;
+    max-width: 420px;
+    margin: 0 0 20px;
+  }
+
+  #resetBtn {
+    background: #f4f1ea;
+    color: #1f2640;
+    border: none;
+    padding: 10px 22px;
+    border-radius: 10px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<div id="stage">
+  <div id="question">
+    <h1>Are you a Gay? 🌈</h1>
+    <p>Just answer honestly...</p>
+  </div>
+
+  <button id="yesBtn" class="choice">Yes</button>
+  <button id="noBtn" class="choice">No</button>
+
+  <div id="caption">(go on, Dont be shy)</div>
+
+  <div id="gotchaOverlay">
+    <h2>BADDING YARN? 📸</h2>
+    <p id="gotchaText"></p>
+    <button id="resetBtn">Run it again</button>
+  </div>
+</div>
+
+<div id="flash"></div>
+
+<audio id="bgMusic" preload="auto">
+  <source src="bist.mp3" type="audio/mpeg">
+</audio>
+
+<script>
+(function () {
+  const stage = document.getElementById('stage');
+  const yesBtn = document.getElementById('yesBtn');
+  const noBtn = document.getElementById('noBtn');
+  const flash = document.getElementById('flash');
+  const overlay = document.getElementById('gotchaOverlay');
+  const gotchaText = document.getElementById('gotchaText');
+  const resetBtn = document.getElementById('resetBtn');
+  const caption = document.getElementById('caption');
+  const bgMusic = document.getElementById('bgMusic');
+
+  let dodgeCount = 0;
+  const MAX_DODGES = 6;
+  let finished = false;
+
+  function placeInitial() {
+    const sw = stage.clientWidth, sh = stage.clientHeight;
+    if (!sw || !sh) return; // stage not measurable yet, keep CSS fallback position
+    yesBtn.style.left = (sw / 2 - 150) + 'px';
+    yesBtn.style.top  = (sh * 0.55) + 'px';
+    noBtn.style.left  = (sw / 2 + 20) + 'px';
+    noBtn.style.top   = (sh * 0.55) + 'px';
+  }
+
+  function rect(el) {
+    return el.getBoundingClientRect();
+  }
+
+  function dodge(fromX, fromY) {
+    if (finished) return;
+    const sw = stage.clientWidth, sh = stage.clientHeight;
+    const w = rect(noBtn).width, h = rect(noBtn).height;
+    let newX, newY, tries = 0;
+    do {
+      newX = Math.random() * (sw - w - 20) + 10;
+      newY = Math.random() * (sh * 0.7 - h) + sh * 0.15;
+      tries++;
+    } while (Math.hypot(newX - fromX, newY - fromY) < 120 && tries < 15);
+
+    noBtn.style.left = newX + 'px';
+    noBtn.style.top = newY + 'px';
+
+    dodgeCount++;
+    growShrink();
+  }
+
+  function growShrink() {
+    const progress = Math.min(dodgeCount / MAX_DODGES, 1);
+    const noScale = 1 - progress * 0.85;
+    const yesScale = 1 + progress * 1.4;
+
+    noBtn.style.fontSize = (1.1 * noScale) + 'rem';
+    noBtn.style.width = (130 * noScale) + 'px';
+    noBtn.style.height = (56 * noScale) + 'px';
+    noBtn.style.opacity = Math.max(1 - progress * 0.9, 0.08);
+
+    yesBtn.style.fontSize = (1.1 * yesScale) + 'rem';
+    yesBtn.style.width = (130 * yesScale) + 'px';
+    yesBtn.style.height = (56 * yesScale) + 'px';
+
+    const sw = stage.clientWidth, sh = stage.clientHeight;
+    yesBtn.style.left = (sw / 2 - (130 * yesScale) / 2) + 'px';
+    yesBtn.style.top = (sh / 2 - (56 * yesScale) / 2) + 'px';
+
+    if (progress >= 1) {
+      noBtn.style.pointerEvents = 'none';
+      caption.textContent = "yeah... that's not happening";
+    }
+  }
+
+  // Track pointer / touch proximity to trigger dodge before contact
+  function checkProximity(x, y) {
+    if (finished) return;
+    const r = rect(noBtn);
+    const cx = r.left + r.width / 2;
+    const cy = r.top + r.height / 2;
+    const dist = Math.hypot(x - cx, y - cy);
+    const threshold = Math.max(r.width, r.height) * 1.3 + 40;
+    if (dist < threshold) {
+      dodge(x, y);
+    }
+  }
+
+  window.addEventListener('mousemove', (e) => checkProximity(e.clientX, e.clientY));
+  window.addEventListener('touchmove', (e) => {
+    if (e.touches && e.touches[0]) {
+      checkProximity(e.touches[0].clientX, e.touches[0].clientY);
+    }
+  }, { passive: true });
+  window.addEventListener('touchstart', (e) => {
+    if (e.touches && e.touches[0]) {
+      checkProximity(e.touches[0].clientX, e.touches[0].clientY);
+    }
+  }, { passive: true });
+
+  // If somehow tapped/clicked anyway: "teleport" + fake screenshot
+  yesBtn.addEventListener('click', () => {
+    if (finished) return;
+    triggerFakeScreenshot('yes');
+  });
+
+  noBtn.addEventListener('click', () => {
+    if (finished) return;
+    triggerFakeScreenshot('no');
+  });
+
+  function triggerFakeScreenshot(answer) {
+    finished = true;
+    yesBtn.style.pointerEvents = 'none';
+    noBtn.style.pointerEvents = 'none';
+
+    flash.classList.add('fire');
+    if (navigator.vibrate) {
+      navigator.vibrate(60);
+    }
+
+    bgMusic.currentTime = 0;
+    bgMusic.volume = 0.6;
+    bgMusic.play().catch(() => {
+      // No valid audio source set, or playback blocked — fine, ignore.
+    });
+
+    setTimeout(() => {
+      flash.classList.remove('fire');
+      gotchaText.textContent = answer === 'yes'
+        ? "Okay lang na nong baton taka 🥺🌈."
+        : "You picked No, but the button cornered you anyway. No screenshot was really taken — just a lighting trick.";
+      overlay.style.display = 'flex';
+    }, 380);
+  }
+
+  resetBtn.addEventListener('click', () => {
+    bgMusic.pause();
+    bgMusic.currentTime = 0;
+    dodgeCount = 0;
+    finished = false;
+    overlay.style.display = 'none';
+    caption.textContent = '(go on, try to click "No")';
+    yesBtn.style.opacity = 1;
+    yesBtn.style.fontSize = '1.1rem';
+    yesBtn.style.width = '130px';
+    yesBtn.style.height = '56px';
+    yesBtn.style.pointerEvents = 'auto';
+    noBtn.style.fontSize = '1.1rem';
+    noBtn.style.width = '130px';
+    noBtn.style.height = '56px';
+    noBtn.style.pointerEvents = 'auto';
+    placeInitial();
+  });
+
+  window.addEventListener('resize', () => {
+    if (!finished) placeInitial();
+  });
+
+  if (document.readyState === 'complete' || document.readyState === 'interactive') {
+    placeInitial();
+  } else {
+    document.addEventListener('DOMContentLoaded', placeInitial);
+  }
+  window.addEventListener('load', placeInitial);
+})();
+</script>
+
+</body>
+</html>
